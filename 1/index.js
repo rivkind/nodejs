@@ -2,7 +2,7 @@ const express = require('express');
 
 const webserver = express(); // создаём веб-сервер
 
-const port = 3050;
+const port = 8880;
 
 webserver.get('/', (req, res) => { 
     
