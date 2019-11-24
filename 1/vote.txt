@@ -1,1 +1,1 @@
-[{"code":"vote1","text":"Vote1","count":0},{"code":"vote2","text":"Vote2","count":3},{"code":"vote3","text":"Vote3","count":0},{"code":"vote4","text":"Vote4","count":0}]
+[{"code":"vote1","text":"Vote1","count":0},{"code":"vote2","text":"Vote2","count":3},{"code":"vote3","text":"Vote3","count":0},{"code":"vote4","text":"Vote4","count":1}]

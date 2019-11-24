@@ -7,6 +7,7 @@ const os = require('os');
 const webserver = express();
 
 webserver.use(express.urlencoded({extended:true}));
+webserver.use(express.json()); // мидлварь, умеющая обрабатывать тело запроса в формате JSON
 
 const logFN = path.join(__dirname, '_server.log');
 const voteFN = path.join(__dirname, 'vote.txt');
@@ -47,6 +48,7 @@ webserver.get('/variants', (req, res) => {
     const vote = getVote();
     const resVote = prepareData(vote,'count');
     
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(resVote);
 });
 
@@ -55,21 +57,39 @@ webserver.post('/stat', (req, res) => {
 
     const vote = getVote();
     const resVote = prepareData(vote,'text');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(resVote);
 
 });
 
+webserver.options('/vote', (req, res) => {
+    // console.log('option',req.body); 
+    logLineSync(logFN,`[${port}] `+"post vote preflight called");
+    res.setHeader("Access-Control-Allow-Origin","*");
+    res.setHeader("Access-Control-Allow-Headers","Content-Type");
+    res.send(""); 
+});
+
+
 webserver.post('/vote', (req, res) => {
+
+    console.log(req.body);
     const answerCode = req.body.vote;
     logLineSync(logFN,`[${port}] `+'post vote. Vote = '+answerCode);
     const vote = getVote();
+    if(answerCode) {
+        const idx = vote.findIndex(v => v.code === answerCode)
 
-    const idx = vote.findIndex(v => v.code === answerCode)
+        vote[idx].count = vote[idx].count + 1;
+    
+        postVote(vote);
+    }
+    
+    
+    
 
-    vote[idx].count = vote[idx].count + 1;
-
-    postVote(vote);
-
+    
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(vote);
     
 });
