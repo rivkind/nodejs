@@ -1,8 +1,78 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-const webserver = express(); // создаём веб-сервер
 
-const port = 8880;
+const webserver = express();
+
+webserver.use(express.urlencoded({extended:true}));
+
+const logFN = path.join(__dirname, '_server.log');
+const voteFN = path.join(__dirname, 'vote.txt');
+const port = 8881;
+
+const logLineSync = (logFilePath,logLine) => {
+    const logDT=new Date();
+    let time=logDT.toLocaleDateString()+" "+logDT.toLocaleTimeString();
+    let fullLogLine=time+" "+logLine;
+
+    const logFd = fs.openSync(logFilePath, 'a+'); // и это же сообщение добавляем в лог-файл
+    fs.writeSync(logFd, fullLogLine + os.EOL); // os.EOL - это символ конца строки, он разный для разных ОС
+    fs.closeSync(logFd);
+}
+
+const getVote = () => {
+    return JSON.parse(fs.readFileSync(voteFN, "utf8"));
+}
+
+const postVote = (data) => {
+
+    const dataJSON = JSON.stringify(data);
+
+    fs.writeFileSync(voteFN, dataJSON)
+
+}
+
+const prepareData = (data, prop) => {
+    return data.map(d=>{
+        d[prop]=undefined;
+        return ({...d});
+    });
+}
+
+webserver.get('/variants', (req, res) => {
+    logLineSync(logFN,`[${port}] `+'get variants');
+
+    const vote = getVote();
+    const resVote = prepareData(vote,'count');
+    
+    res.send(resVote);
+});
+
+webserver.post('/stat', (req, res) => {
+    logLineSync(logFN,`[${port}] `+'post stat');
+
+    const vote = getVote();
+    const resVote = prepareData(vote,'text');
+    res.send(resVote);
+
+});
+
+webserver.post('/vote', (req, res) => {
+    const answerCode = req.body.vote;
+    logLineSync(logFN,`[${port}] `+'post vote. Vote = '+answerCode);
+    const vote = getVote();
+
+    const idx = vote.findIndex(v => v.code === answerCode)
+
+    vote[idx].count = vote[idx].count + 1;
+
+    postVote(vote);
+
+    res.send(vote);
+    
+});
 
 webserver.get('/', (req, res) => { 
     
