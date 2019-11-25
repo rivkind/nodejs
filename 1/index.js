@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const bodyParser = require('body-parser');
 const path = require('path');
 const os = require('os');
 
@@ -7,7 +8,7 @@ const os = require('os');
 const webserver = express();
 
 webserver.use(express.urlencoded({extended:true}));
-webserver.use(express.json()); // мидлварь, умеющая обрабатывать тело запроса в формате JSON
+webserver.use(bodyParser.text());
 
 const logFN = path.join(__dirname, '_server.log');
 const voteFN = path.join(__dirname, 'vote.txt');
@@ -18,8 +19,8 @@ const logLineSync = (logFilePath,logLine) => {
     let time=logDT.toLocaleDateString()+" "+logDT.toLocaleTimeString();
     let fullLogLine=time+" "+logLine;
 
-    const logFd = fs.openSync(logFilePath, 'a+'); // и это же сообщение добавляем в лог-файл
-    fs.writeSync(logFd, fullLogLine + os.EOL); // os.EOL - это символ конца строки, он разный для разных ОС
+    const logFd = fs.openSync(logFilePath, 'a+');
+    fs.writeSync(logFd, fullLogLine + os.EOL);
     fs.closeSync(logFd);
 }
 
@@ -48,7 +49,6 @@ webserver.get('/variants', (req, res) => {
     const vote = getVote();
     const resVote = prepareData(vote,'count');
     
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.send(resVote);
 });
 
@@ -57,41 +57,84 @@ webserver.post('/stat', (req, res) => {
 
     const vote = getVote();
     const resVote = prepareData(vote,'text');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    
     res.send(resVote);
 
 });
 
-webserver.options('/vote', (req, res) => {
-    // console.log('option',req.body); 
-    logLineSync(logFN,`[${port}] `+"post vote preflight called");
-    res.setHeader("Access-Control-Allow-Origin","*");
-    res.setHeader("Access-Control-Allow-Headers","Content-Type");
-    res.send(""); 
-});
-
-
 webserver.post('/vote', (req, res) => {
 
-    console.log(req.body);
-    const answerCode = req.body.vote;
+    const answerCode = req.body;
     logLineSync(logFN,`[${port}] `+'post vote. Vote = '+answerCode);
     const vote = getVote();
-    if(answerCode) {
-        const idx = vote.findIndex(v => v.code === answerCode)
-
-        vote[idx].count = vote[idx].count + 1;
     
-        postVote(vote);
+    const idx = vote.findIndex(v => v.code === answerCode)
+
+    vote[idx].count = vote[idx].count + 1;
+
+    postVote(vote);
+    
+    res.status(200).send('');
+    
+});
+
+webserver.get('/mainpage', (req, res) => { 
+    const form = `<div id='root'>Loading...</div><div id='result'></div>
+    <script>
+
+    let votes = [];
+     
+
+    const vote = (data) => {
+
+        const fetchOptions={
+            method: "post",
+            body: data,
+        };
+        fetch('/vote',{method: "post", body: data})
+        .then(() => getResult());
     }
-    
-    
-    
 
-    
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(vote);
-    
+    const getResult = () => {
+        document.getElementById("result").innerHTML = 'Loading...';
+        fetch('/stat',{method: "post"})
+        .then((response) => response.json())
+        .then(data => renderResult(data));
+    }
+
+    const renderVote = (data) => {
+        votes = data;
+        const html = data.reduce((h,d)=>{return h+'<div><button onClick=vote("'+d.code+'")>'+d.text+'</button></div>'},'');
+        document.getElementById("root").innerHTML = html;
+        getResult();
+    }
+
+    const renderResult = (data) => {
+        
+        for(let i=0; i < data.length; i++) {
+            for(let j=0; j < votes.length; j++){
+                if(data[i].code == votes[j].code) {
+                    data[i].code = votes[j].text;
+                }
+            }
+        }
+
+        const htmlData = data.reduce((h,d)=>{return h+'<tr><td>'+d.code+'</td><td>'+d.count+'</td></tr>'},'');
+        
+        const html = "<table border='1'><tr><th>Code</th><th>Count</th></tr>"+htmlData+"</table>";
+        document.getElementById("result").innerHTML = html;
+    }
+
+    window.onload = (e) => { 
+        fetch('/variants')
+        .then((response) => response.json())
+        .then(data => renderVote(data)); 
+    }
+    </script>
+    </body>
+    </html>`;
+
+    res.send(form);
 });
 
 webserver.get('/', (req, res) => { 
@@ -102,8 +145,6 @@ webserver.get('/', (req, res) => {
     let username = req.query.name || '';
     let password = req.query.password;
 
-    
-    
     if(req.originalUrl !== '/'){
         username = username.trim();
         password = password.trim();
@@ -121,8 +162,6 @@ webserver.get('/', (req, res) => {
                     <div><input type='submit' value='Отправить' /></div>
                 </form>
                 ${successText}`;
-
-    
 
     res.send(form);
 });
