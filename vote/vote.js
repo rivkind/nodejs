@@ -60,7 +60,7 @@ const getResult = async () => {
 }
 
 const renderFormat = () => {
-    const html = `Формат результатов: ${typeMime.map( d => `<a href="#" onClick=changeFormat("${d.type}")>${d.text}</a>` ).join("")}`;
+    const html = `Формат результатов: ${typeMime.map( d => `<a onClick=changeFormat("${d.type}")>${d.text}</a>` ).join("")}`;
     
     f.innerHTML = html;
 }

@@ -6,4 +6,9 @@ div {
 }
 a {
     padding: 5px;
+    cursor: pointer;
+    color: blue;
+}
+a:hover {
+    text-decoration: underline;
 }
