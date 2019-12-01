@@ -2,7 +2,8 @@ const express = require('express');
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const path = require('path');
-const os = require('os');
+const sha256 = require('js-sha256');
+const querystring = require('querystring');
 
 
 const webserver = express();
@@ -10,131 +11,146 @@ const webserver = express();
 webserver.use(express.urlencoded({extended:true}));
 webserver.use(bodyParser.text());
 
-const logFN = path.join(__dirname, '_server.log');
 const voteFN = path.join(__dirname, 'vote.txt');
+const resultFN = path.join(__dirname, 'result.txt');
 const port = 8881;
 
-const logLineSync = (logFilePath,logLine) => {
-    const logDT=new Date();
-    let time=logDT.toLocaleDateString()+" "+logDT.toLocaleTimeString();
-    let fullLogLine=time+" "+logLine;
 
-    const logFd = fs.openSync(logFilePath, 'a+');
-    fs.writeSync(logFd, fullLogLine + os.EOL);
-    fs.closeSync(logFd);
+const getResult = () => {
+    return JSON.parse(fs.readFileSync(resultFN, "utf8"));
 }
 
-const getVote = () => {
-    return JSON.parse(fs.readFileSync(voteFN, "utf8"));
+const getHtml = (data) => {
+    const htmlData = `<table border='1'>
+                        <tr><th>Code</th><th>Count</th></tr>
+                        ${data.map( d => `<tr><td>${d.code}</td><td>${d.count}</td></tr>` ).join("")}
+                    </table>`;
+    return htmlData;
 }
 
-const postVote = (data) => {
-
-    const dataJSON = JSON.stringify(data);
-
-    fs.writeFileSync(voteFN, dataJSON)
-
-}
-
-const prepareData = (data, prop) => {
-    return data.map(d=>{
-        d[prop]=undefined;
-        return ({...d});
-    });
-}
-
-webserver.get('/variants', (req, res) => {
-    logLineSync(logFN,`[${port}] `+'get variants');
-
-    const vote = getVote();
-    const resVote = prepareData(vote,'count');
+const getXML = (data) => {
+    const XMLData = `<?xml version="1.0" encoding="utf-8"?>
+                        <result>
+                            ${data.map( d => `<vote>
+                                                <code>${d.code}</code>
+                                                <count>${d.count}</count>
+                                            </vote>` ).join("")}
+                        </result>`;
     
-    res.send(resVote);
+                
+    return XMLData;
+}
+
+const mimeJSON = "application/json";
+const mimeXML = "application/xml";
+const mimeHTML = "text/html";
+
+
+
+webserver.post('/export', (req, res) => {
+    const exprt = req.body.export;
+    const result = getResult();
+
+    if(exprt === mimeJSON) {
+        res.setHeader("Content-Disposition", 'attachment; filename="result.json"');
+        res.setHeader("Content-Type", mimeJSON);
+        data = result;
+    } else if(exprt === mimeXML) {
+        res.setHeader("Content-Disposition", 'attachment; filename="result.xml"');
+        res.setHeader("Content-Type", mimeXML);
+        data = getXML(result);
+    } else {
+        res.setHeader("Content-Disposition", 'attachment; filename="result.html"');
+        res.setHeader("Content-Type", mimeHTML);
+        data = getHtml(result);
+    }
+    
+    res.send(data);
 });
 
-webserver.post('/stat', (req, res) => {
-    logLineSync(logFN,`[${port}] `+'post stat');
-
-    const vote = getVote();
-    const resVote = prepareData(vote,'text');
+webserver.get('/variants', (req, res) => {
+    const vote = JSON.parse(fs.readFileSync(voteFN, "utf8"));
     
-    res.send(resVote);
+    res.send(vote);
+});
 
+webserver.get('/stat', (req, res) => {
+    const result = getResult();
+    
+    let data;
+
+    const clientAccept=req.headers.accept;
+    if ( clientAccept === mimeJSON ) {
+        res.setHeader("Content-Type", mimeJSON);
+        data = result;
+    } else if ( clientAccept === mimeXML ) {
+
+        data = getXML(result);
+        res.setHeader("Content-Type", mimeXML);
+    } else {
+        data = getHtml(result);
+        res.setHeader("Content-Type", mimeHTML);
+    }
+    const ETag = sha256(data);
+    const ifNoneMatch=req.header("If-None-Match");
+
+    if ( ifNoneMatch && (ifNoneMatch === ETag) ) {
+        res.status(304).end();
+    }else{
+        res.setHeader("ETag",ETag);
+        res.setHeader("Cache-Control","public, max-age=0");
+        res.send(data);
+    }
 });
 
 webserver.post('/vote', (req, res) => {
 
     const answerCode = req.body;
-    logLineSync(logFN,`[${port}] `+'post vote. Vote = '+answerCode);
-    const vote = getVote();
+    const result = getResult();
     
-    const idx = vote.findIndex(v => v.code === answerCode)
+    const idx = result.findIndex(v => v.code === answerCode)
 
-    vote[idx].count = vote[idx].count + 1;
+    result[idx].count = result[idx].count + 1;
 
-    postVote(vote);
-    
+    const dataJSON = JSON.stringify(result);
+
+    fs.writeFileSync(resultFN, dataJSON)
+
     res.status(200).send('');
     
 });
 
-webserver.get('/mainpage', (req, res) => { 
-    const form = `<div id='root'>Loading...</div><div id='result'></div>
-    <script>
+webserver.use(
+    "/mainpage",
+    express.static(path.resolve(__dirname,"..","template","vote.html"))
+);
 
-    let votes = [];
-     
+webserver.get("/mainpage/*", (req, res) => { 
+    const originalUrlDecoded=querystring.unescape(req.originalUrl);
+    
+    const filePath=path.resolve(__dirname,"..","vote",originalUrlDecoded.substring(10));
 
-    const vote = (data) => {
+    try {
+        const stats=fs.statSync(filePath);
+        if ( stats.isFile() ) {
+            
+            if ( /\.html$/.test(filePath) )
+                res.setHeader("Content-Type", "text/html");
+            if ( /\.js$/.test(filePath) )
+                res.setHeader("Content-Type", "application/javascript");
 
-        const fetchOptions={
-            method: "post",
-            body: data,
-        };
-        fetch('/vote',{method: "post", body: data})
-        .then(() => getResult());
-    }
-
-    const getResult = () => {
-        document.getElementById("result").innerHTML = 'Loading...';
-        fetch('/stat',{method: "post"})
-        .then((response) => response.json())
-        .then(data => renderResult(data));
-    }
-
-    const renderVote = (data) => {
-        votes = data;
-        const html = data.reduce((h,d)=>{return h+'<div><button onClick=vote("'+d.code+'")>'+d.text+'</button></div>'},'');
-        document.getElementById("root").innerHTML = html;
-        getResult();
-    }
-
-    const renderResult = (data) => {
-        
-        for(let i=0; i < data.length; i++) {
-            for(let j=0; j < votes.length; j++){
-                if(data[i].code == votes[j].code) {
-                    data[i].code = votes[j].text;
-                }
-            }
+            const fileStream=fs.createReadStream(filePath);
+            fileStream.pipe(res);
+        }   
+        else {
+            console.log("запрошена папка",filePath);
+            res.status(403).end();
         }
-
-        const htmlData = data.reduce((h,d)=>{return h+'<tr><td>'+d.code+'</td><td>'+d.count+'</td></tr>'},'');
-        
-        const html = "<table border='1'><tr><th>Code</th><th>Count</th></tr>"+htmlData+"</table>";
-        document.getElementById("result").innerHTML = html;
+    }
+    catch ( err ) {
+        res.status(404).end();
     }
 
-    window.onload = (e) => { 
-        fetch('/variants')
-        .then((response) => response.json())
-        .then(data => renderVote(data)); 
-    }
-    </script>
-    </body>
-    </html>`;
-
-    res.send(form);
 });
 
 webserver.get('/', (req, res) => { 
@@ -166,5 +182,6 @@ webserver.get('/', (req, res) => {
     res.send(form);
 });
 
-webserver.listen(port);
-console.log("web server running on port "+port);
+webserver.listen(port,()=>{
+    console.log("web server running on port "+port);
+});
