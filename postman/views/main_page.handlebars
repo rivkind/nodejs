@@ -1,0 +1,83 @@
+<div style="text-transform: uppercase; text-align: center; padding: 20px; background-color: skyblue">Request</div>
+
+<div>
+
+
+
+<div class="Content">
+  <div class="request-block">
+    <div>
+      <select id="method">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+      </select>
+    </div>
+    <div style="width: 50%">
+      <input id="url" type="text" placeholder="URL" />
+    </div>
+    <div>
+      <button onclick="sendHandler()">SEND</button>
+    </div>
+  </div>
+  <div class="request-param">
+    <div>
+      <div><strong>Params</strong></div>
+      <div>
+        <span><input name="params-key" type="text" placeholder="key" value="" /></span>
+        <span><input name="params-value" type="text" placeholder="value"  value="" /></span>
+      </div>
+      <div>
+        <span><input name="params-key" type="text" placeholder="key"  value="" /></span>
+        <span><input name="params-value" type="text" placeholder="value"  value="" /></span>
+      </div>
+      <div>
+        <span><input name="params-key" type="text" placeholder="key"  value="" /></span>
+        <span><input name="params-value" type="text" placeholder="value"  value="" /></span>
+      </div>
+    </div>
+    <div>
+      <div><strong>Headers</strong></div>
+      <div>
+        <span><input name="headers-key" type="text" placeholder="key"  value="" /></span>
+        <span><input name="headers-value" type="text" placeholder="value" value="" /></span>
+      </div>
+      <div>
+        <span><input name="headers-key" type="text" placeholder="key"  value="" /></span>
+        <span><input name="headers-value" type="text" placeholder="value" value="" /></span>
+      </div>
+      <div>
+        <span><input name="headers-key" type="text" placeholder="key"  value="" /></span>
+        <span><input name="headers-value" type="text" placeholder="value" value="" /></span>
+      </div>
+    </div>
+    <div>
+      <div><strong>Body</strong></div>
+      <div>
+        <textarea id="body" placeholder="body"></textarea>
+      </div>
+      
+    </div>
+  </div>
+  <div style='clear:both'></div>
+</div>
+
+<div style='clear: both'></div>
+
+</div>
+                        
+<div style="background-color: skyblue;  padding: 20px; text-align: center">Response <span id="status"></span></div>
+<div style="display:flex;justify-content: space-around;">
+  <div style="padding-right: 20px; width:33%">
+    <div>Headers</div>
+    <table border='1'><thead><tr><th>key</th><th>value</th></tr></thead><tbody id="headers"></tbody></table>
+  </div>
+  <div style="padding-right: 20px; width:33%">
+    <div>Body</div>
+    <div id="bodyText"></div>
+  </div>
+  <div style="width:33%">
+    <div>Preview</div>
+    <div id="bodyPreview"></div>
+  </div>
+</div>
+

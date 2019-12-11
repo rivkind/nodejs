@@ -1,0 +1,49 @@
+div
+{
+  text-align: justify;
+}
+
+.Menu
+{
+  width: 185px;
+  float: left;
+}
+
+.Content
+{
+  margin-left: 200px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  background-color: white;
+  padding-left: 20px;
+}
+
+.request-block, .request-param {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+.request-block input {
+    width: 100%;
+}
+.request-param input {
+    width: 30%;
+}
+.request-param div span:last-of-type input {
+    width: 50%;
+}
+
+#bodyText{
+  height:300px;
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #ddd;
+
+}
+
+#bodyPreview{
+  height:300px;
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #ddd;
+}
