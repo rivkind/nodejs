@@ -158,20 +158,22 @@ webserver.get('/', (req, res) => {
     let errorText = '';
     let successText = '';
 
-    let username = req.query.name || '';
-    let password = req.query.password;
+
+
+    let username = req.query.username || '';
+    let success = req.query.success || false;
 
     if(req.originalUrl !== '/'){
         username = username.trim();
-        password = password.trim();
-        if(username !== '' && password === 'admin'){
-            successText = `<div style='color:green'>Username="${username}", password="${password}"</div>`;
+        
+        if(username !== '' && success){
+            successText = `<div style='color:green'>Username="${username}"</div>`;
         }else{
             errorText = `<div style='color:red'>Wrong username or password!</div>`; 
         }
     }
 
-    const form = `<form method='get' action='/'>
+    const form = `<form method='post' action='/'>
                     <div><input name='name' type='text' placeholder='username' value='${username}' /></div>
                     <div><input name='password' type='password' placeholder='password' /></div>
                     ${errorText}
@@ -180,6 +182,18 @@ webserver.get('/', (req, res) => {
                 ${successText}`;
 
     res.send(form);
+});
+
+webserver.post('/', (req, res) => {
+    let username = req.body.name || '';
+    let password = req.body.password; 
+    username = username.trim();
+    password = password.trim();
+    if(username !== '' && password === 'admin'){
+        res.redirect(302,`/?username=${username}&success=true`)
+    }else{
+        res.redirect(302,`/?username=${username}`)
+    }
 });
 
 webserver.listen(port,()=>{

@@ -1,0 +1,1 @@
+[{"method":"GET","url":"https://www.bps-sberbank.by/Portal/public/commonEntity/list/86/0","body":"","params":{},"headers":{}},{"method":"GET","url":"https://www.bps-sberbank.by/Portal/public/commonEntity/list/86/0","body":"","params":{},"headers":{}},{"method":"GET","url":"https://www.bps-sberbank.by/Portal/public/commonEntity/list/86/0","body":"","params":{},"headers":{}}]

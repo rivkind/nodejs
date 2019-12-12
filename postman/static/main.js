@@ -3,7 +3,7 @@ const tb = document.getElementById("headers");
 const bt = document.getElementById("bodyText");
 const bp = document.getElementById("bodyPreview");
 
-const sendHandler = () => {
+const prepareData = () => {
     const param_keys = document.querySelectorAll('input[name=params-key]');
     const param_values = document.querySelectorAll('input[name=params-value]');
     let params = {};
@@ -47,6 +47,31 @@ const sendHandler = () => {
         headers
     }
 
+    return json;
+}
+
+const saveHandler = async () => {
+    const json = prepareData();
+
+    const fetchOptions={
+        method: "post",
+        headers: {
+                'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(json),
+    };
+
+    const response=await fetch('/saveTemplate',fetchOptions);
+
+    if(response.ok) {
+        fillTemplates();
+        
+    }
+}
+
+const sendHandler = () => {
+    
+    const json = prepareData();
     
     call_postman(json).then((res)=>{
         
@@ -55,8 +80,10 @@ const sendHandler = () => {
         s.innerHTML = status;
         
          writeHeaders(res.headers);
+
         return res.text();
     }).then((body)=>{
+        
         bt.innerText = body; 
         bp.innerHTML = body; 
     }).catch((e)=>{
@@ -85,3 +112,10 @@ const call_postman = async (data) => {
     return response;
 }
 
+const fillTemplates = async () => {
+    const res = await fetch('/getTemplates',{method:"POST"});
+    const templates = await res.json();
+    console.log(templates);
+}
+
+fillTemplates();

@@ -2,6 +2,8 @@ const express = require('express');
 const exphbs  = require('express-handlebars');
 const path = require('path');
 const fetch = require('node-fetch');
+const zlib = require('zlib');
+const fs = require('fs').promises;
 
 const webserver = express();
 
@@ -52,7 +54,7 @@ const bodyValidator = (req, res, next) => {
 
     next();
 }
-
+const templateFN = path.join(__dirname, 'template.txt');
 
 const port = 8881;
 
@@ -62,35 +64,81 @@ webserver.get('/index.html', function (req, res) {
     });
 });
 
+const getTemplate = async () => {
+    const data = await fs.readFile(templateFN, "utf8");
+    
+    return JSON.parse(data);
+}
+
+webserver.post('/saveTemplate', async (req, res) => {
+    const templates = await getTemplate();
+    console.log(typeof templates);
+    
+    templates.push(req.body);
+    const dataJSON = JSON.stringify(templates);
+
+    await fs.writeFile(templateFN, dataJSON)
+
+    res.status(200).send('');
+});
+
+webserver.post('/getTemplates', async (req, res) => {
+    const templates = await getTemplate();
+    
+
+    res.status(200).send(templates);
+});
+
 webserver.post('/getData', urlValidator, bodyValidator, async (req, res) => {
     
     const { url, fetchOption } = res.locals;
     
+    let gzip = false;
+    
     try {
+        
         await fetch(url.href, fetchOption)
                     .then( response => {
                         const headers = response.headers.raw();
+                        
                         for (var prop in headers) {
                             res.setHeader(prop, headers[prop][0]);
                         }
 
-                        const content_type = response.headers.get('Content-Type');
+                        const content_type = response.headers.get('Content-Type').toLowerCase();
+                        if(response.headers.has('Content-Encoding')){
+                            const content_encoding = response.headers.get('Content-Encoding').toLowerCase() || '';
+
+                            if(content_encoding === 'gzip') {gzip=true}
+                        }
                         
                         res.status(response.status);
-                        if(content_type.toLowerCase() === 'application/json') {
+                        if(content_type.includes('application/json')) {
                             return response.json();
                         } else {
                             return response.text(); 
                         }
                     })
-                    .then(body => res.send(body))
+                    .then(body => {
+                        if(gzip){
+                            const buf = new Buffer(JSON.stringify(body), 'utf-8');
+                            zlib.gzip(buf, function (_, result) {
+                                res.send(result);
+                            });
+                        }else{
+                            res.status(200).send(body); 
+                        }
+                            
+                        
+                    })
                     .catch((err) => {
                         throw Error(err); 
                     });
     }catch (e) {
         res.status(404).send(e);
     }
-   
+
+    
 });
 
 
