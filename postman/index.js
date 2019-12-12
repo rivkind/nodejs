@@ -137,7 +137,6 @@ webserver.post('/getData', urlValidator, bodyValidator, async (req, res) => {
                         }
                     })
                     .then(body => {
-                        console.log(body);
                         if(gzip){
                             const buf = new Buffer(JSON.stringify(body), 'utf-8');
                             zlib.gzip(buf, function (_, result) {
