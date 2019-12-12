@@ -47,3 +47,36 @@ div
   overflow: auto;
   border: 1px solid #ddd;
 }
+
+.templateBlock {
+  display: flex; 
+  flex-direction: column;
+  border-top: 1px solid #333;
+  padding-top: 5px;
+}
+
+.templateBlock > div {
+  padding: 0 10px 10px;
+
+}
+
+.templateBlock > div:first-of-type {
+  font-weight: bold;
+  
+}
+
+.templateBlock > div > div {
+  cursor:pointer;
+
+}
+
+.templateBlock > div > div:hover {
+  text-decoration: underline;
+
+}
+
+.templateBlock > div:last-of-type {
+  display: flex; 
+  flex-direction: row;
+  justify-content: space-between;
+}

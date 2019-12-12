@@ -1,11 +1,13 @@
 const express = require('express');
 const exphbs  = require('express-handlebars');
 const path = require('path');
+const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
 const zlib = require('zlib');
 const fs = require('fs').promises;
 
 const webserver = express();
+
 
 webserver.engine('handlebars', exphbs());
 webserver.set('view engine', 'handlebars');
@@ -13,6 +15,7 @@ webserver.set('views', path.join(__dirname, 'views'));
 
 webserver.use(express.urlencoded({extended:true}));
 webserver.use(express.json());
+webserver.use(bodyParser.text());
 
 
 const urlValidator = (req, res, next) => {
@@ -72,7 +75,6 @@ const getTemplate = async () => {
 
 webserver.post('/saveTemplate', async (req, res) => {
     const templates = await getTemplate();
-    console.log(typeof templates);
     
     templates.push(req.body);
     const dataJSON = JSON.stringify(templates);
@@ -89,16 +91,31 @@ webserver.post('/getTemplates', async (req, res) => {
     res.status(200).send(templates);
 });
 
+webserver.post('/removeTemplates', async (req, res) => {
+    const templates = await getTemplate();
+
+    const t = templates.filter((template,i)=>(i!==+req.body));
+
+    const dataJSON = JSON.stringify(t);
+
+    await fs.writeFile(templateFN, dataJSON)
+    
+    res.status(200).send(t);
+});
+
 webserver.post('/getData', urlValidator, bodyValidator, async (req, res) => {
     
     const { url, fetchOption } = res.locals;
     
     let gzip = false;
+
+    
     
     try {
         
         await fetch(url.href, fetchOption)
                     .then( response => {
+                        
                         const headers = response.headers.raw();
                         
                         for (var prop in headers) {
@@ -120,6 +137,7 @@ webserver.post('/getData', urlValidator, bodyValidator, async (req, res) => {
                         }
                     })
                     .then(body => {
+                        console.log(body);
                         if(gzip){
                             const buf = new Buffer(JSON.stringify(body), 'utf-8');
                             zlib.gzip(buf, function (_, result) {
