@@ -3,7 +3,6 @@ const exphbs  = require('express-handlebars');
 const path = require('path');
 const bodyParser = require('body-parser');
 const fetch = require('node-fetch');
-const zlib = require('zlib');
 const fs = require('fs').promises;
 
 const webserver = express();
@@ -107,46 +106,28 @@ webserver.post('/getData', urlValidator, bodyValidator, async (req, res) => {
     
     const { url, fetchOption } = res.locals;
     
-    let gzip = false;
-
-    
+    let answer={};
     
     try {
         
         await fetch(url.href, fetchOption)
                     .then( response => {
                         
-                        const headers = response.headers.raw();
+                        answer.headers = response.headers.raw();
                         
-                        for (var prop in headers) {
-                            res.setHeader(prop, headers[prop][0]);
-                        }
-
                         const content_type = response.headers.get('Content-Type').toLowerCase();
-                        if(response.headers.has('Content-Encoding')){
-                            const content_encoding = response.headers.get('Content-Encoding').toLowerCase() || '';
-
-                            if(content_encoding === 'gzip') {gzip=true}
-                        }
                         
-                        res.status(response.status);
-                        if(content_type.includes('application/json')) {
-                            return response.json();
-                        } else {
-                            return response.text(); 
-                        }
+                        answer.statusText = response.statusText;
+                        answer.status = response.status;
+
+                        const r = (content_type.includes('application/json'))? response.json() : response.text();
+
+                        return r;
+
                     })
                     .then(body => {
-                        if(gzip){
-                            const buf = new Buffer(JSON.stringify(body), 'utf-8');
-                            zlib.gzip(buf, function (_, result) {
-                                res.send(result);
-                            });
-                        }else{
-                            res.status(200).send(body); 
-                        }
-                            
-                        
+                        answer.body = body; 
+                        res.status(200).send(answer); 
                     })
                     .catch((err) => {
                         throw Error(err); 
@@ -154,8 +135,6 @@ webserver.post('/getData', urlValidator, bodyValidator, async (req, res) => {
     }catch (e) {
         res.status(404).send(e);
     }
-
-    
 });
 
 

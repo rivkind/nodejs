@@ -76,28 +76,34 @@ const sendHandler = () => {
     
     const json = prepareData();
     
-    call_postman(json).then((res)=>{
-        
-        const status = res.status + " " + res.statusText;
-        
-        s.innerHTML = status;
-        
-         writeHeaders(res.headers);
+    call_postman(json)
+                .then((res)=>res.json())
+                .then((bodyRes)=>{
+                    const { status, statusText, headers, body} = bodyRes;
+                    writeHeaders(headers);
+                    s.innerHTML = status + " " + statusText;
+                    const contentType = headers['content-type'][0].toLowerCase();
+                    bp.contentWindow.document.open();
+                    
 
-        return res.text();
-    }).then((body)=>{
-        
-        bt.innerText = body; 
-        bp.innerHTML = body; 
-    }).catch((e)=>{
-
-    });
+                    if(contentType.includes('application/json')){
+                        bt.innerText = JSON.stringify(body); 
+                        bp.contentWindow.document.write(JSON.stringify(body));
+                    }else{
+                        bt.innerText = body;
+                        bp.contentWindow.document.write(body); 
+                    }
+                    bp.contentWindow.document.close();
+                }).catch((e)=>{
+                    alert('Ошибка');
+                    console.log(e);
+                });
 }
 
 const writeHeaders = (headers) => {
     let html = '';
-    for (var pair of headers.entries()) {
-        html += `<tr><td>${pair[0]}</td><td>${pair[1]}</td></tr>`;
+    for (pair in headers) {
+        html += `<tr><td>${pair}</td><td>${headers[pair][0]}</td></tr>`;
     }
     tb.innerHTML = html;
 }
@@ -136,7 +142,6 @@ const fillTemplates = async () => {
 fillTemplates();
 
 const showHandler = (id) => {
-    console.log(templates[id]);
     document.getElementById("url").value = templates[id].url;
     document.getElementById("body").value = templates[id].body;
 
