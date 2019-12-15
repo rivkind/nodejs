@@ -72,38 +72,50 @@ const saveHandler = async () => {
     }
 }
 
-const sendHandler = () => {
+const sendHandler = async () => {
     
     const json = prepareData();
     
-    call_postman(json)
-                .then((res)=>res.json())
-                .then((bodyRes)=>{
-                    const { status, statusText, headers, body} = bodyRes;
-                    writeHeaders(headers);
-                    s.innerHTML = status + " " + statusText;
-                    const contentType = headers['content-type'][0].toLowerCase();
-                    bp.contentWindow.document.open();
-                    
+    try {
+        const res = await call_postman(json);
+        
+        const bodyRes = await res.json();
+        
+        if(res.status === 400) {
+            throw Error(bodyRes.errorMessage);
+        }
+        const { status, statusText, headers, body} = bodyRes;
+        s.innerHTML = status + " " + statusText;
+        const contentType = headers['content-type'][0].toLowerCase();
+        const bodyOutput = (contentType.includes('application/json'))? JSON.stringify(body) : body;
 
-                    if(contentType.includes('application/json')){
-                        bt.innerText = JSON.stringify(body); 
-                        bp.contentWindow.document.write(JSON.stringify(body));
-                    }else{
-                        bt.innerText = body;
-                        bp.contentWindow.document.write(body); 
-                    }
-                    bp.contentWindow.document.close();
-                }).catch((e)=>{
-                    alert('Ошибка');
-                    console.log(e);
-                });
+        fillResponseField(headers,bodyOutput);
+
+    }catch (e) {
+        alert(e.message);
+    }
 }
 
-const writeHeaders = (headers) => {
+const fillResponseField = (h,b) => {
+    fillHeaders(h);
+    fillBody(b);
+    fillPreview(b);
+}
+
+const fillPreview = (body) => {
+    bp.contentWindow.document.open();
+    bp.contentWindow.document.write(body);
+    bp.contentWindow.document.close();
+}
+
+const fillBody = (b) => {
+    bt.innerText = b;
+}
+
+const fillHeaders = (h) => {
     let html = '';
-    for (pair in headers) {
-        html += `<tr><td>${pair}</td><td>${headers[pair][0]}</td></tr>`;
+    for (pair in h) {
+        html += `<tr><td>${pair}</td><td>${h[pair][0]}</td></tr>`;
     }
     tb.innerHTML = html;
 }
