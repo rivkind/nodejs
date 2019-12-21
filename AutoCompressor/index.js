@@ -5,10 +5,6 @@ const path = require('path');
 const zlib = require('zlib');
 
 const folder = process.argv[2];
-const currentTab = process.argv[3];
-
-
-const folderPath = (currentTab && currentTab === 'current')? path.join(__dirname, folder) : folder;
 
 const readDirectory = async (dirPath) => {
     try {
@@ -46,4 +42,4 @@ const createGzip = async (originFile, gzFile) => {
     await inp.pipe(zlib.createGzip()).pipe(out);
 }
 
-readDirectory(folderPath);
+readDirectory(folder);
