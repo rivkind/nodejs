@@ -1,32 +1,31 @@
-const fs = require('fs').promises;
-var async = require('async');
-const fsSync = require('fs');
+const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const async = require('async');
 
 const folder = process.argv[2];
 
-const readDirectory = async (dirPath) => {
+const readDirectory = (dirPath) => {
     try {
-        const files = await fs.readdir(dirPath);
+        const files = fs.readdirSync(dirPath);
 
         async.eachSeries(files, async file => {
             if(!(/gz$/.test(file))){
                 const filePath = path.join(dirPath, file);
-                const fileInFolder = await fs.stat(filePath);
+                const fileInFolder = fs.statSync(filePath);
                 if (fileInFolder.isDirectory()) {
                     console.log('Directory: ',filePath);
-                    await readDirectory(filePath);
+                    readDirectory(filePath);
                 } else if(fileInFolder.isFile()) {
                     console.log('File: ',filePath);
                     const gzipFN = filePath + '.gz';
                     try {
-                        const gzipFile = await fs.stat(gzipFN);
+                        const gzipFile = fs.statSync(gzipFN);
                         if(fileInFolder.mtime > gzipFile.mtime) {
-                            createGzip(filePath,gzipFN);
+                            await createGzip(filePath,gzipFN);
                         }
                     }catch (e) {
-                        createGzip(filePath,gzipFN);
+                        await createGzip(filePath,gzipFN);
                     }
                 }
             }
@@ -37,9 +36,16 @@ const readDirectory = async (dirPath) => {
 }
 
 const createGzip = async (originFile, gzFile) => {
-    const inp = fsSync.createReadStream(originFile);
-    const out = fsSync.createWriteStream(gzFile);
-    await inp.pipe(zlib.createGzip()).pipe(out);
+    
+    await new Promise((resolve, reject) => {
+        const inp = fs.createReadStream(originFile);
+        const out = fs.createWriteStream(gzFile);
+        inp.pipe(zlib.createGzip()).pipe(out);
+        out.on('close', () => {
+            console.log(`File created ${gzFile}`);
+            resolve(out);
+        })
+    });
 }
 
 readDirectory(folder);
