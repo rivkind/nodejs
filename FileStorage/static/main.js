@@ -4,7 +4,7 @@ const comment = document.getElementById("comment");
 const file = document.getElementById("file");
 const bar = document.getElementById("myBar");
 const status = document.getElementById("status"); 
-const socket = io.connect('http://localhost:8881');
+const socket = io.connect('http://178.172.195.18:8881');
 
 const handleUpload = async (e) => {
     
